@@ -17,6 +17,12 @@
     </article> <!-- gallery-wrap .end// -->
             </aside>
             <main class="col-md-6 border-left">
+    
+    
+    
+    <form action="{% url 'add_cart' single_product.id %}" method="POST">
+        {% csrf_token %}
+
     <article class="content-body">
     
     <h2 class="title">{{ single_product.product_name }}</h2>
@@ -31,40 +37,33 @@
     <hr>
         <div class="row">
             <div class="item-option-select">
-                <h6>Choose Color</h6>
-                <div class="btn-group btn-group-sm btn-group-toggle" data-toggle="buttons">
-                  <label class="btn btn-light">
-                    <input type="radio" name="radio_color"> Silver
-                  </label>
-                  <label class="btn btn-light">
-                    <input type="radio" name="radio_color" > Gray
-                  </label>
-                  <label class="btn btn-light active">
-                    <input type="radio" name="radio_color checked"> Gold
-                  </label>
-                  <label class="btn btn-light">
-                    <input type="radio" name="radio_color"> Black
-                  </label>
-                </div> 
+                <h6>Seleccionar Color</h6>
+                <select class="form-control" name="color" required>
+
+                <option value="" disabled selected>Seleccione</option>
+                {%for i in single_product.variation_set.colors%}
+
+                  <option value="{{i.variation_value | lower}}">{{i.variation_value | capfirst}}</option>
+                
+                {%endfor%}
+
+                </select>
+
             </div>
         </div> <!-- row.// -->
         <div class="row">
             <div class="item-option-select">
-                <h6>Select Size</h6>
-                <div class="btn-group btn-group-sm btn-group-toggle" data-toggle="buttons">
-                  <label class="btn btn-light">
-                    <input type="radio" name="radio_color"> S
-                  </label>
-                  <label class="btn btn-light active">
-                    <input type="radio" name="radio_color" checked> M
-                  </label>
-                  <label class="btn btn-light">
-                    <input type="radio" name="radio_color"> L
-                  </label>
-                  <label class="btn btn-light">
-                    <input type="radio" name="radio_color"> XL
-                  </label>
-                </div> 
+                <h6>Seleccionar Talla</h6>
+                <select class="form-control" name="talla" required>
+
+                <option value="" disabled selected>Seleccione</option>
+                {%for i in single_product.variation_set.tallas%}
+
+                  <option value="{{i.variation_value | lower}}">{{i.variation_value | capfirst}}</option>
+                
+                {%endfor%}
+
+                </select>
             </div>
         </div> <!-- row.// -->
         <hr>
@@ -72,18 +71,16 @@
         {% if single_product.stock <= 0 %}
           <h3> Producto fuera de Stock </h3>
         {% else %}
-
-          {%if in_cart %}
-           <a href="#" class="btn  btn-success"> <span class="text">Producto agregado al carrito</span> <i class="fas fa-check"></i>  </a>
-          <a href="{% url 'cart'%}" class="btn  btn-outline-primary"> <span class="text">Ver carrito</span> <i class="fas fa-eye"></i>  </a>
-          {%else%}
-
-        <a href="{% url 'add_cart' single_product.id %}" class="btn  btn-primary"> <span class="text">Agregar al carrito</span> <i class="fas fa-shopping-cart"></i>  </a>
-          {%endif%}
+        
+        <button type="submit" class="btn  btn-primary"> <span class="text">Agregar al carrito</span> <i class="fas fa-shopping-cart"></i>  </button>
+        
 
         {% endif %}
     
       </article> <!-- product-info-aside .// -->
+
+      </form>
+
             </main> <!-- col.// -->
         </div> <!-- row.// -->
     </div> <!-- card.// -->
