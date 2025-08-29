@@ -1,6 +1,13 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages, auth
 from django.contrib.auth.decorators import login_required
+from django.contrib.sites.shortcuts import get_current_site
+from django.template.loader import render_to_string
+from django.utils.http import urlsafe_base64_encode
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_bytes
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import EmailMessage
 from .forms import RegistrationForm
 from .models import Account
 
@@ -22,8 +29,22 @@ def register(request):
             user = Account.objects.create_user(first_name=first_name, last_name=last_name, email=email, username=username, password=password)
             user.phone_number = phone_number
             user.save()
-            messages.success(request, 'Usuario Registrado Correctamente.')
-            return redirect('register')
+
+            current_site = get_current_site(request)
+            mail_subject = 'Por favor activa tu cuenta'
+            body = render_to_string('accounts/account_verification_email.html',{
+                'user': user,
+                'domain': current_site,
+                'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+                'token': default_token_generator.make_token(user),
+            })
+            to_email = email
+            send_email = EmailMessage(mail_subject, body, to=[to_email])
+            send_email.send()   
+
+            #messages.success(request, 'Usuario Registrado Correctamente.')
+
+            return redirect('/accounts/login/?command=verification&email='+email)
 
 
 
@@ -43,7 +64,7 @@ def login(request):
         if user is not None:
             auth.login(request, user)
             messages.success(request, 'Has iniciado sesión correctamente.')
-            return redirect('home')
+            return redirect('dashboard')
         else:
             messages.error(request, 'Las credenciales no son correctas.')
             return redirect('login')
@@ -56,4 +77,82 @@ def logout(request):
     messages.success(request, 'Has cerrado sesión correctamente.')
     return redirect('login')
 
-    return
+def activate(request, uidb64, token):
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = Account._default_manager.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, Account.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        user.is_active = True
+        user.save()
+        messages.success(request, 'Felicidades! Tu cuenta ha sido activada.')
+        return redirect('login')
+    else:
+        messages.error(request, 'El enlace de activación no es válido.')
+        return redirect('register')
+    
+
+@login_required(login_url='login')
+def dashboard(request):
+    return render(request, 'accounts/dashboard.html')
+
+def forgotPassword(request):
+    if request.method == 'POST':
+        email = request.POST['email']
+        if Account.objects.filter(email=email).exists():
+            user = Account.objects.get(email__exact=email)
+
+            current_site = get_current_site(request)
+            mail_subject = 'Restablecer tu contraseña'
+            body = render_to_string('accounts/reset_password_email.html',{
+                'user': user,
+                'domain': current_site,
+                'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+                'token': default_token_generator.make_token(user),
+            })
+            to_email = email
+            send_email = EmailMessage(mail_subject, body, to=[to_email])
+            send_email.send()   
+
+            messages.success(request, 'Hemos enviado un email a tu cuenta de correo para restablecer tu contraseña.')
+            return redirect('login')
+        else:
+            messages.error(request, 'La cuenta no existe.')
+            return redirect('forgotPassword')
+
+    return render(request, 'accounts/forgotPassword.html')
+
+def resetpassword_validate(request, uidb64, token):
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = Account._default_manager.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, Account.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        request.session['uid'] = uid
+        messages.success(request, 'Por favor restablece tu contraseña.')
+        return redirect('resetPassword')
+    else:
+        messages.error(request, 'El enlace ha expirado.')
+        return redirect('login')
+
+def resetPassword(request):
+    if request.method == 'POST':
+        password = request.POST['password']
+        confirm_password = request.POST['confirm_password']
+
+        if password == confirm_password:
+            uid = request.session.get('uid')
+            user = Account.objects.get(pk=uid)
+            user.set_password(password)
+            user.save()
+            messages.success(request, 'Contraseña restablecida correctamente.')
+            return redirect('login')
+        else:
+            messages.error(request, 'Las contraseñas no coinciden.')
+            return redirect('resetPassword')
+    else:
+        return render(request, 'accounts/resetPassword.html')
