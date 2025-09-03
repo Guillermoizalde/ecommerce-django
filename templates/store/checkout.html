@@ -1,0 +1,135 @@
+{%extends 'base.html'%}
+
+{%load static%}
+
+{%block content%}
+
+<section class="section-content padding-y bg">
+    <div class="container">
+    
+    <!-- ============================ COMPONENT 1 ================================= -->
+    <div class="row">
+        <aside class="col-lg-6">
+    <div class="card">
+
+        <div class="card-body">
+            <h4 class="card-title mb-4">Detalles de Facturación y Envío</h4>
+            {% include 'includes/alerts.html' %}
+            <form action="{% url 'checkout' %}" method="POST" role="form">
+                {% csrf_token %}
+            <div class="form-row">
+                <div class="col form-group">
+                    <label>Nombre</label>
+                    <input type="text" class="form-control" name="first_name" value="{{user.first_name}}">
+                </div> <!-- form-group end.// -->
+                <div class="col form-group">
+                    <label>Apellido</label>
+                    <input type="text" class="form-control" name="last_name" value="{{user.last_name}}">
+                </div> <!-- form-group end.// -->
+            </div> <!-- form-row end.// -->
+            <div class="form-group">
+                <label>Direccion</label>
+                <input type="text" class="form-control" name="address" value="{{profile.address}}">
+            </div> <!-- form-group end.// -->
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label>Ciudad</label>
+                    <input type="text" class="form-control" name="city" value="{{profile.city}}">
+                </div> <!-- form-group end.// -->
+                <div class="form-group col-md-4">
+                    <label>Estado</label>
+                    <input type="text" class="form-control" name="state" value="{{profile.state}}">
+                </div> <!-- form-group end.// -->
+                <div class="form-group col-md-2">
+                    <label>Zip</label>
+                    <input type="text" class="form-control" name="zip_code" value="{{profile.zip_code}}">
+                </div> <!-- form-group end.// -->
+            </div> <!-- form-row end.// -->
+            <div class="form-group">
+                <label>Telefono</label>
+                <input type="text" class="form-control" name="phone" value="{{profile.phone}}">
+            </div> <!-- form-group end.// -->
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" class="form-control" name="email" value="{{user.email}}">
+            </div> <!-- form-group end.// -->
+            <div class="form-group">
+                <label>Notas</label>
+                <textarea class="form-control" name="order_note" rows="4"></textarea>
+            </div> <!-- form-group end.// -->
+            <button type="submit" class="btn btn-primary btn-block"> Continuar al Pago </button>
+            
+        </div> <!-- card-body.// -->
+
+    </div> <!-- card.// -->
+    
+        </aside> <!-- col.// -->
+        <aside class="col-lg-6">
+    
+            <div class="card">
+            <div class="card-body">
+                <table class="table table-borderless table-shopping-cart">
+    <thead class="text-muted">
+    <tr class="small text-uppercase">
+      <th scope="col">Product</th>
+      <th scope="col" width="120">Cantidad</th>
+      <th scope="col" width="120">Precio</th>
+    </tr>
+    </thead>
+
+    <tbody>
+
+    {% for cart_item in cart_items %}
+    <tr>
+        <td>
+            <figure class="itemside align-items-center">
+                <div class="aside"><img src="{{ cart_item.product.images.url }}" class="img-sm"></div>
+                <figcaption class="info">
+                    <a href="{{cart_item.product.get_url}}" class="title text-dark">{{cart_item.product.product_name}}</a>
+                    <p class="text-muted small">
+                        {% if cart_item.variations.all %}
+                            {% for item in cart_item.variations.all %}
+                                {{ item.variation_category | capfirst}} : {{ item.variation_value | capfirst}} <br>
+                            {% endfor %}
+                        {% endif %}
+                    </p>
+                </figcaption>
+            </figure>
+        </td>
+        <td> 
+            <div class="form-inline">
+                <input type="text" class="form-control" value="{{cart_item.quantity}}" readonly>
+            </div>
+        </td>
+        <td> 
+            <div class="price-wrap"> 
+                <var class="price">$ {{cart_item.sub_total}}</var> 
+                <small class="text-muted"> $ {{cart_item.product.price}} </small>
+            </div> <!-- price-wrap .// -->
+        </td>
+        <td class="text-right"> 
+        {#<a href="{% url 'remove_cart_item' cart_item.product.id cart_item.id %}" class="btn btn-danger"> Eliminar</a>#}
+        </td>
+    </tr>
+    {%endfor%}
+
+    </tbody>
+    </table>
+                <button type="submit" name="submit" class="btn btn-primary btn-block"> Ordenar Productos </button>
+                <a href="{% url 'store'%}" class="btn btn-light btn-block">Continua comprando</a>
+                </form>
+            </div> <!-- card-body.// -->
+            </div> <!-- card.// -->
+    
+    </aside> <!-- col.// -->
+    
+    
+    </div> <!-- row.// -->
+    <!-- ============================ COMPONENT 1 END .// ================================= -->
+    
+    </div> <!-- container .//  -->
+    </section>
+    <!-- ========================= SECTION CONTENT END// ========================= -->
+
+
+    {%endblock%}

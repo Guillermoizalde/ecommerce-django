@@ -10,6 +10,11 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import EmailMessage
 from .forms import RegistrationForm
 from .models import Account
+import requests
+
+from carts.views import _cart_id
+from carts.models import Cart, CartItem
+from store.models import Product
 
 # Create your views here.
 def register(request):
@@ -58,17 +63,52 @@ def login(request):
     if request.method == 'POST':
         email = request.POST['email']
         password = request.POST['password']
-
         user = auth.authenticate(email=email, password=password)
-
         if user is not None:
+            # MIGRAR Y FUSIONAR CARRITO DE SESIÓN AL USUARIO
+            try:
+                cart = Cart.objects.get(cart_id=_cart_id(request))
+                session_cart_items = CartItem.objects.filter(cart=cart)
+                for session_item in session_cart_items:
+                    # Busca si el usuario ya tiene ese producto y variaciones
+                    user_cart_items = CartItem.objects.filter(
+                        user=user,
+                        product=session_item.product,
+                    )
+                    found = False
+                    for user_item in user_cart_items:
+                        if set(user_item.variations.all()) == set(session_item.variations.all()):
+                            # Si existe, suma cantidades y elimina el de sesión
+                            user_item.quantity += session_item.quantity
+                            user_item.save()
+                            session_item.delete()
+                            found = True
+                            break
+                    if not found:
+                        # Si no existe, asocia el item al usuario
+                        session_item.user = user
+                        session_item.cart = None
+                        session_item.save()
+            except Cart.DoesNotExist:
+                pass
+
             auth.login(request, user)
             messages.success(request, 'Has iniciado sesión correctamente.')
-            return redirect('dashboard')
-        else:
-            messages.error(request, 'Las credenciales no son correctas.')
-            return redirect('login')
 
+            url = request.META.get('HTTP_REFERER')
+            try:
+                query = requests.utils.urlparse(url).query
+                params = dict(x.split('=') for x in query.split('&'))
+                if 'next' in params:
+                    nextpage = params['next']
+                    return redirect(nextpage)
+            except:
+                return redirect('dashboard')
+
+        else:
+            messages.error(request, 'Credenciales inválidas')
+            return redirect('login')
+        
     return render(request, 'accounts/login.html')
 
 @login_required(login_url='login')
